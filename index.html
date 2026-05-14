@@ -802,6 +802,32 @@
     let timeLeft = 30;
     const used = new Set();
 
+    // حفظ آخر سؤال ظهر في كل فئة حتى لا يتكرر مباشرة في اللعبة التالية
+    const lastQuestionByCategory = JSON.parse(localStorage.getItem('yalla_last_questions') || '{}');
+
+    function saveLastQuestions() {
+      localStorage.setItem('yalla_last_questions', JSON.stringify(lastQuestionByCategory));
+    }
+
+    function pickQuestion(categoryIndex) {
+      const cat = categories[categoryIndex];
+      const lastIndex = lastQuestionByCategory[categoryIndex];
+
+      let availableIndexes = cat.questions
+        .map((q, idx) => idx)
+        .filter(idx => String(idx) !== String(lastIndex));
+
+      if (availableIndexes.length === 0) {
+        availableIndexes = cat.questions.map((q, idx) => idx);
+      }
+
+      const randomIndex = availableIndexes[Math.floor(Math.random() * availableIndexes.length)];
+      lastQuestionByCategory[categoryIndex] = randomIndex;
+      saveLastQuestions();
+
+      return cat.questions[randomIndex];
+    }
+
     function renderBoard() {
       const board = document.getElementById('board');
       board.innerHTML = '';
@@ -836,8 +862,8 @@
       currentIndex = index;
       const cat = categories[index];
 
-      // اختيار سؤال عشوائي من الفئة
-      currentQuestion = cat.questions[Math.floor(Math.random() * cat.questions.length)];
+      // اختيار سؤال عشوائي من الفئة بدون تكرار السؤال السابق مباشرة
+      currentQuestion = pickQuestion(index);
 
       document.getElementById('qCategory').textContent = cat.icon + ' ' + cat.name;
       document.getElementById('qText').textContent = currentQuestion.question;
@@ -1028,6 +1054,7 @@
       used.clear();
       Object.keys(categoryWinners).forEach(k => delete categoryWinners[k]);
       currentIndex = null;
+      currentQuestion = null;
       updateScores();
       renderBoard();
       document.getElementById('resultModal').classList.remove('show');

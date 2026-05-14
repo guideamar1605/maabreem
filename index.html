@@ -251,6 +251,8 @@
       padding: 24px;
       background: rgba(1, 4, 18, 0.82);
       z-index: 20;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .modal.show { display: flex; }
 
@@ -308,6 +310,12 @@
       justify-content: center;
       flex-wrap: wrap;
       margin-top: 22px;
+      position: sticky;
+      bottom: 0;
+      z-index: 50;
+      padding: 12px 8px 4px;
+      background: linear-gradient(180deg, transparent, rgba(5, 8, 24, .96) 35%);
+      border-radius: 0 0 24px 24px;
     }
 
     button.action {
@@ -495,8 +503,25 @@
     }
 
     @media (max-width: 860px) {
+      body {
+        overflow-y: auto;
+      }
+
+      .app {
+        width: 96vw;
+        padding-bottom: 28px;
+      }
+
       .topbar, .bottom {
         grid-template-columns: 1fr;
+      }
+
+      .score-card, .timer-card {
+        min-height: 82px;
+      }
+
+      .title-card h1 {
+        font-size: 36px;
       }
 
       .board {
@@ -506,10 +531,82 @@
       .hex {
         width: 42vw;
         height: 37vw;
+        min-width: unset;
+        min-height: unset;
+        font-size: 17px;
+        padding: 12px;
+      }
+
+      .hex .icon {
+        font-size: 32px;
+      }
+
+      .modal {
+        align-items: flex-start;
+        padding: 10px;
+      }
+
+      .question-box {
+        width: 96vw;
+        max-height: none;
+        padding: 14px;
+        border-radius: 22px;
+        margin: 8px auto 18px;
+      }
+
+      .team-select {
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .team-select button {
+        font-size: 17px;
+        padding: 10px 12px;
+      }
+
+      .question-category {
+        font-size: 20px;
+        margin-bottom: 6px;
+      }
+
+      .timer-num {
+        font-size: 34px;
+      }
+
+      .question-text {
+        font-size: 26px;
+        margin: 8px 0 12px;
+        line-height: 1.25;
       }
 
       .answers {
         grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .answer {
+        min-height: 56px;
+        padding: 12px;
+        font-size: 20px;
+      }
+
+      .feedback {
+        font-size: 23px;
+        min-height: 36px;
+        margin-top: 8px;
+      }
+
+      .modal-actions {
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 10px;
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+      }
+
+      button.action {
+        width: 100%;
+        font-size: 20px;
+        padding: 14px 16px;
       }
     }
   </style>

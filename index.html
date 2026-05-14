@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>يلّا نخطّطها — AI Edition</title>
+  <style>
+    :root {
+      --bg: #060816;
+      --panel: rgba(10, 18, 45, 0.82);
+      --cyan: #00eaff;
+      --pink: #ff2df7;
+      --yellow: #ffd000;
+      --green: #27ff71;
+      --red: #ff355e;
+      --white: #f8fbff;
+      --muted: #a9b7d8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Tahoma", "Arial", sans-serif;
+      color: var(--white);
+      background:
+        radial-gradient(circle at 20% 10%, rgba(255,45,247,0.22), transparent 30%),
+        radial-gradient(circle at 80% 10%, rgba(0,234,255,0.25), transparent 35%),
+        linear-gradient(135deg, #040614 0%, #090b27 45%, #120826 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: radial-gradient(circle, rgba(0,0,0,0.9), transparent 80%);
+      pointer-events: none;
+    }
+
+    .app {
+      width: min(1280px, 96vw);
+      margin: 0 auto;
+      padding: 22px 0 36px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr 1.5fr 1fr;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .score-card, .timer-card, .title-card, .team-card {
+      background: var(--panel);
+      border: 2px solid rgba(0,234,255,0.55);
+      border-radius: 24px;
+      box-shadow: 0 0 26px rgba(0,234,255,0.18), inset 0 0 20px rgba(255,255,255,0.04);
+      padding: 16px;
+      backdrop-filter: blur(8px);
+    }
+
+    .title-card {
+      text-align: center;
+      border-color: rgba(255,45,247,0.65);
+      box-shadow: 0 0 30px rgba(255,45,247,0.18);
+    }
+
+    .title-card h1 {
+      margin: 0;
+      font-size: clamp(30px, 5vw, 64px);
+      line-height: 1;
+      text-shadow: 0 0 18px rgba(255,255,255,0.6), 0 0 32px var(--cyan);
+    }
+
+    .title-card .sub {
+      margin-top: 8px;
+      color: var(--cyan);
+      font-weight: 900;
+      letter-spacing: 2px;
+      font-size: clamp(16px, 2vw, 26px);
+    }
+
+    .score-card {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      min-height: 112px;
+    }
+
+    .trophy {
+      font-size: 48px;
+      filter: drop-shadow(0 0 14px var(--yellow));
+    }
+
+    .score-card .label { color: var(--muted); font-size: 20px; font-weight: 800; }
+    .score-card .score { color: var(--yellow); font-size: 46px; font-weight: 900; line-height: 1; }
+
+    .timer-card {
+      min-height: 112px;
+      text-align: center;
+      border-radius: 999px;
+      border-color: rgba(255,45,247,0.65);
+    }
+
+    .timer-num {
+      font-size: 44px;
+      font-weight: 900;
+      text-shadow: 0 0 18px rgba(255,255,255,0.45);
+    }
+    .timer-label { color: var(--muted); font-size: 18px; font-weight: 700; }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(150px, 1fr));
+      gap: 18px;
+      justify-items: center;
+      align-items: center;
+      margin: 24px auto 20px;
+    }
+
+    .hex-wrap {
+      width: auto;
+      height: auto;
+      position: relative;
+    }
+
+    .hex {
+      width: min(190px, 18vw);
+      height: min(165px, 15.6vw);
+      min-width: 140px;
+      min-height: 122px;
+      clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%);
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 18px 22px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 900;
+      font-size: clamp(18px, 1.7vw, 29px);
+      text-align: center;
+      background: linear-gradient(145deg, rgba(19,31,77,0.95), rgba(9,12,34,0.95));
+      box-shadow: 0 0 0 4px var(--glow), 0 0 24px var(--glow), inset 0 0 26px rgba(255,255,255,0.08);
+      transition: transform .18s, filter .18s, opacity .18s;
+      position: relative;
+    }
+
+    .hex:hover {
+      transform: translateY(-7px) scale(1.04);
+      filter: brightness(1.25);
+    }
+
+    .hex.blue-team {
+      background: linear-gradient(145deg, #00f0ff, #008cff 45%, #003cff);
+      box-shadow:
+        0 0 0 5px #00f0ff,
+        0 0 40px #00eaff,
+        0 0 80px rgba(0,234,255,.95),
+        inset 0 0 40px rgba(255,255,255,.25);
+      animation: winnerGlowBlue 0.7s infinite alternate;
+      filter: brightness(1.4);
+    }
+
+    .hex.pink-team {
+      background: linear-gradient(145deg, #ff4df8, #ff0099 45%, #7a0066);
+      box-shadow:
+        0 0 0 5px #ff2df7,
+        0 0 40px #ff2df7,
+        0 0 80px rgba(255,45,247,.95),
+        inset 0 0 40px rgba(255,255,255,.25);
+      animation: winnerGlowPink 0.7s infinite alternate;
+      filter: brightness(1.4);
+    }
+
+    @keyframes winnerGlowBlue {
+      from { filter: brightness(1); }
+      to { filter: brightness(1.35); }
+    }
+
+    @keyframes winnerGlowPink {
+      from { filter: brightness(1); }
+      to { filter: brightness(1.35); }
+    }
+    .hex.used {
+      opacity: .95;
+      cursor: not-allowed;
+    }
+    .hex .icon { font-size: 44px; line-height: 1; }
+
+    .c1 { --glow: #8d30ff; }
+    .c2 { --glow: #00d9ff; }
+    .c3 { --glow: #1fff65; }
+    .c4 { --glow: #ff2df7; }
+    .c5 { --glow: #d3ff00; }
+    .c6 { --glow: #ff8b00; }
+    .c7 { --glow: #00c8ff; }
+    .c8 { --glow: #00ffa2; }
+    .c9 { --glow: #9d33ff; }
+    .c10 { --glow: #ff4a00; }
+    .c11 { --glow: #ffd000; }
+
+    .bottom {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      gap: 18px;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .team-card {
+      text-align: center;
+      border-color: rgba(255,45,247,0.55);
+    }
+    .team-card.blue { border-color: rgba(0,234,255,0.65); }
+    .team-name { font-size: 22px; font-weight: 900; color: var(--muted); }
+    .team-score { font-size: 44px; font-weight: 900; margin-top: 4px; }
+    .blue .team-score { color: var(--cyan); }
+    .pink .team-score { color: var(--pink); }
+
+    .cta {
+      text-align: center;
+      font-size: clamp(24px, 3vw, 44px);
+      font-weight: 900;
+      color: white;
+      padding: 18px;
+      border-radius: 22px;
+      background: linear-gradient(90deg, rgba(255,45,247,.15), rgba(0,234,255,.12));
+      border: 2px solid rgba(255,255,255,.18);
+      text-shadow: 0 0 18px rgba(255,255,255,.45);
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(1, 4, 18, 0.82);
+      z-index: 20;
+    }
+    .modal.show { display: flex; }
+
+    .question-box {
+      width: min(980px, 96vw);
+      background: linear-gradient(145deg, rgba(10,18,45,.96), rgba(17,8,43,.96));
+      border: 3px solid var(--cyan);
+      border-radius: 34px;
+      padding: 28px;
+      box-shadow: 0 0 42px rgba(0,234,255,.34), inset 0 0 32px rgba(255,255,255,.06);
+      text-align: center;
+      position: relative;
+    }
+
+    .question-category {
+      color: var(--cyan);
+      font-size: 26px;
+      font-weight: 900;
+      margin-bottom: 12px;
+    }
+
+    .question-text {
+      font-size: clamp(30px, 4vw, 54px);
+      font-weight: 900;
+      margin: 12px 0 24px;
+      line-height: 1.25;
+    }
+
+    .answers {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-top: 10px;
+    }
+
+    .answer {
+      border: 2px solid rgba(255,255,255,.18);
+      border-radius: 20px;
+      padding: 18px;
+      background: rgba(255,255,255,.07);
+      color: white;
+      font-size: 24px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: .18s;
+      min-height: 78px;
+    }
+    .answer:hover { transform: translateY(-3px); border-color: var(--yellow); filter: brightness(1.2); }
+    .answer.correct { background: rgba(39,255,113,.22); border-color: var(--green); box-shadow: 0 0 24px rgba(39,255,113,.3); }
+    .answer.wrong { background: rgba(255,53,94,.2); border-color: var(--red); }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 22px;
+    }
+
+    button.action {
+      border: none;
+      border-radius: 16px;
+      padding: 14px 22px;
+      font-size: 21px;
+      font-weight: 900;
+      color: #06101a;
+      background: linear-gradient(135deg, var(--cyan), #ffffff);
+      cursor: pointer;
+      box-shadow: 0 0 18px rgba(0,234,255,.28);
+    }
+    button.action.pink { background: linear-gradient(135deg, var(--pink), #ffffff); }
+    button.action.gold { background: linear-gradient(135deg, var(--yellow), #ffffff); }
+
+    .team-select {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .team-select button {
+      border: 2px solid rgba(255,255,255,.2);
+      border-radius: 18px;
+      padding: 12px 18px;
+      background: rgba(255,255,255,.08);
+      color: white;
+      font-size: 22px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .team-select button.active { border-color: var(--yellow); box-shadow: 0 0 18px rgba(255,208,0,.32); color: var(--yellow); }
+
+    .feedback {
+      font-size: 34px;
+      font-weight: 900;
+      min-height: 48px;
+      margin-top: 14px;
+    }
+
+    .result-title { font-size: clamp(38px, 5vw, 68px); font-weight: 900; margin: 0 0 18px; }
+    .winner {
+      color: var(--yellow);
+      text-shadow: 0 0 22px rgba(255,208,0,.5);
+      animation: pulse 1s infinite alternate;
+    }
+
+    .celebration {
+      font-size: clamp(70px, 10vw, 140px);
+      animation: float 1.5s ease-in-out infinite alternate;
+      margin-bottom: 10px;
+      filter: drop-shadow(0 0 22px rgba(255,208,0,.6));
+    }
+
+    .final-points {
+      font-size: clamp(30px, 4vw, 56px);
+      color: var(--cyan);
+      font-weight: 900;
+      margin-top: 12px;
+      text-shadow: 0 0 18px rgba(0,234,255,.45);
+    }
+
+    .winner-team {
+      font-size: clamp(42px, 6vw, 88px);
+      color: var(--yellow);
+      font-weight: 900;
+      margin: 18px 0;
+      text-shadow: 0 0 30px rgba(255,208,0,.65);
+    }
+
+    .result-box-win {
+      border-color: var(--yellow);
+      background:
+        radial-gradient(circle at 50% 10%, rgba(255,208,0,.26), transparent 32%),
+        radial-gradient(circle at 15% 20%, rgba(255,45,247,.24), transparent 34%),
+        radial-gradient(circle at 85% 20%, rgba(0,234,255,.24), transparent 34%),
+        linear-gradient(145deg, rgba(10,18,45,.98), rgba(17,8,43,.98));
+      box-shadow: 0 0 70px rgba(255,208,0,.42), 0 0 110px rgba(255,45,247,.22), inset 0 0 46px rgba(255,255,255,.08);
+    }
+
+    .result-box-tie {
+      border-color: var(--cyan);
+      animation: tieFlash .55s infinite alternate;
+      background:
+        radial-gradient(circle at 30% 20%, rgba(0,234,255,.28), transparent 34%),
+        radial-gradient(circle at 70% 20%, rgba(255,45,247,.28), transparent 34%),
+        linear-gradient(145deg, rgba(10,18,45,.98), rgba(17,8,43,.98));
+    }
+
+    .tie-title {
+      color: var(--cyan);
+      text-shadow: 0 0 28px rgba(0,234,255,.7);
+    }
+
+    .big-replay {
+      font-size: clamp(24px, 3vw, 40px) !important;
+      padding: 20px 36px !important;
+      border-radius: 24px !important;
+      background: linear-gradient(135deg, var(--yellow), #fff, var(--pink)) !important;
+      box-shadow: 0 0 32px rgba(255,208,0,.45) !important;
+      animation: pulse 0.75s infinite alternate;
+    }
+
+    .confetti-rain {
+      font-size: clamp(40px, 5vw, 76px);
+      letter-spacing: 12px;
+      animation: sparkle 0.8s infinite alternate;
+      margin: 8px 0 0;
+    }
+
+    .sparkles {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .sparkles span {
+      position: absolute;
+      font-size: clamp(26px, 4vw, 60px);
+      animation: fall linear infinite;
+      opacity: 0.95;
+      filter: drop-shadow(0 0 12px rgba(255,255,255,.8));
+    }
+
+    .sparkles span:nth-child(1) { left: 5%; animation-duration: 3s; }
+    .sparkles span:nth-child(2) { left: 15%; animation-duration: 4s; }
+    .sparkles span:nth-child(3) { left: 28%; animation-duration: 2.8s; }
+    .sparkles span:nth-child(4) { left: 40%; animation-duration: 3.5s; }
+    .sparkles span:nth-child(5) { left: 55%; animation-duration: 4.2s; }
+    .sparkles span:nth-child(6) { left: 70%; animation-duration: 3.2s; }
+    .sparkles span:nth-child(7) { left: 82%; animation-duration: 2.7s; }
+    .sparkles span:nth-child(8) { left: 92%; animation-duration: 3.8s; }
+
+    @keyframes fall {
+      from {
+        transform: translateY(-120px) rotate(0deg);
+      }
+      to {
+        transform: translateY(100vh) rotate(360deg);
+      }
+    }
+
+    @keyframes tieFlash {
+      from { box-shadow: 0 0 42px rgba(0,234,255,.34), inset 0 0 32px rgba(255,255,255,.06); }
+      to { box-shadow: 0 0 90px rgba(255,45,247,.65), 0 0 120px rgba(0,234,255,.42), inset 0 0 46px rgba(255,255,255,.12); }
+    }
+
+    @keyframes sparkle {
+      from { transform: scale(1) rotate(-1deg); filter: brightness(1); }
+      to { transform: scale(1.08) rotate(1deg); filter: brightness(1.5); }
+    }
+
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.06); }
+    }
+
+    @keyframes float {
+      from { transform: translateY(-4px); }
+      to { transform: translateY(8px); }
+    }
+
+    @media (max-width: 860px) {
+      .topbar, .bottom {
+        grid-template-columns: 1fr;
+      }
+
+      .board {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .hex {
+        width: 42vw;
+        height: 37vw;
+      }
+
+      .answers {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="topbar">
+      <div class="score-card">
+        <div class="trophy">🏆</div>
+        <div>
+          <div class="label">النقاط</div>
+          <div class="score" id="totalScore">0</div>
+        </div>
+      </div>
+
+      <div class="title-card">
+        <h1>يلّا نخطّطها</h1>
+        <div class="sub">AI EDITION</div>
+      </div>
+
+      <div class="timer-card">
+        <div class="timer-num" id="mainTimer">00:30</div>
+        <div class="timer-label">الوقت لكل سؤال</div>
+      </div>
+    </section>
+
+    <section class="board" id="board"></section>
+
+    <section class="bottom">
+      <div class="team-card blue">
+        <div class="team-name">الفريق الأزرق</div>
+        <div class="team-score" id="blueScore">0</div>
+      </div>
+      <div class="cta">اختاروا فئة وابدؤوا التحدّي!</div>
+      <div class="team-card pink">
+        <div class="team-name">الفريق الوردي</div>
+        <div class="team-score" id="pinkScore">0</div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal" id="questionModal">
+    <div class="question-box">
+      <div class="team-select">
+        <button id="selectBlue" class="active" onclick="selectTeam('blue')">الفريق الأزرق</button>
+        <button id="selectPink" onclick="selectTeam('pink')">الفريق الوردي</button>
+      </div>
+      <div class="question-category" id="qCategory"></div>
+      <div class="timer-num" id="qTimer">00:30</div>
+      <div class="question-text" id="qText"></div>
+      <div class="answers" id="answers"></div>
+      <div class="feedback" id="feedback"></div>
+      <div class="modal-actions">
+        <button class="action" onclick="closeQuestion()">إغلاق السؤال</button>
+        <button class="action gold" onclick="showResults()">عرض النتيجة النهائية</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="resultModal">
+    <div class="question-box result-box-win" id="resultBox">
+      <div class="sparkles">
+        <span>✨</span>
+        <span>🎉</span>
+        <span>⭐</span>
+        <span>✨</span>
+        <span>🎊</span>
+        <span>💥</span>
+        <span>🌟</span>
+        <span>🎉</span>
+      </div>
+      <div class="celebration" id="celebrationIcon">🏆🎉✨</div>
+      <h2 class="result-title" id="resultTitle">الفائز الكبير!</h2>
+      <div class="winner-team" id="winnerText"></div>
+      <div class="final-points" id="finalScores"></div>
+      <div class="confetti-rain" id="confettiText">🎊 ✨ 🎉 ⭐ 🎊</div>
+      <audio id="winSound">
+        <source src="https://assets.mixkit.co/active_storage/sfx/1998/1998-preview.mp3" type="audio/mpeg">
+      </audio>
+
+      <audio id="successSound">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3" type="audio/mpeg">
+      </audio>
+      <div class="modal-actions">
+        <button class="action" onclick="hideResults()">رجوع للعبة</button>
+        <button class="action pink big-replay" onclick="resetGame()">🔁 العبوا من جديد</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const categoryWinners = {};
+
+    const categories = [
+      {
+        name: 'الذكاء الاصطناعي',
+        icon: '🤖',
+        cls: 'c1',
+        questions: [
+          { question: 'ما معنى AI؟', answers: ['الذكاء الاصطناعي', 'لعبة إلكترونية', 'نوع هاتف', 'برنامج موسيقى'], correct: 0 },
+          { question: 'ماذا يستطيع الذكاء الاصطناعي أن يفعل؟', answers: ['يساعد في إنشاء صور ونصوص', 'يشرب الماء', 'ينام', 'يركض'], correct: 0 },
+          { question: 'ما هو البرومبت؟', answers: ['الطلب الذي نكتبه للذكاء الاصطناعي', 'اسم لعبة', 'نوع هاتف', 'صوت'], correct: 0 },
+          { question: 'هل يجب أن نصدق كل إجابة من AI؟', answers: ['لا، يجب أن نتحقق', 'نعم دائمًا', 'لا نستخدمه', 'فقط في الألعاب'], correct: 0 },
+          { question: 'أي صورة يمكن أن يصنعها AI؟', answers: ['روبوت في مدرسة مستقبلية', 'ماء فقط', 'حجر فقط', 'لا شيء'], correct: 0 }
+        ]
+      },
+
+      {
+        name: 'التكنولوجيا',
+        icon: '📱',
+        cls: 'c2',
+        questions: [
+          { question: 'أي شركة تصنع هواتف iPhone؟', answers: ['Apple', 'Samsung', 'Nokia', 'Sony'], correct: 0 },
+          { question: 'ما فائدة كلمة المرور؟', answers: ['حماية الحساب', 'تشغيل الضوء', 'زيادة الصوت', 'التقاط صورة'], correct: 0 },
+          { question: 'أي جهاز نستخدمه للتطبيقات والاتصال؟', answers: ['الهاتف الذكي', 'المقص', 'الكرسي', 'الكرة'], correct: 0 },
+          { question: 'ماذا تعني البطارية 1%؟', answers: ['الهاتف يحتاج شحن', 'الإنترنت قوي', 'الصوت مرتفع', 'الكاميرا جديدة'], correct: 0 },
+          { question: 'ما التطبيق الشهير للمحادثات؟', answers: ['WhatsApp', 'Paint', 'Clock', 'Calculator'], correct: 0 }
+        ]
+      },
+
+      {
+        name: 'الألعاب الإلكترونية',
+        icon: '🎮',
+        cls: 'c3',
+        questions: [
+          { question: 'أي لعبة تشتهر ببناء العوالم بالمكعبات؟', answers: ['Minecraft', 'FIFA', 'Chess', 'Subway'], correct: 0 },
+          { question: 'Roblox هو:', answers: ['منصة ألعاب وتجارب', 'تطبيق خرائط', 'نوع كاميرا', 'طعام'], correct: 0 },
+          { question: 'ماذا تعني كلمة Level؟', answers: ['مرحلة أو مستوى', 'صوت', 'لون', 'صورة'], correct: 0 },
+          { question: 'ما الأفضل في اللعب الجماعي؟', answers: ['التعاون مع الفريق', 'إزعاج الآخرين', 'ترك اللعبة', 'الغش'], correct: 0 },
+          { question: 'ماذا يحتاج اللاعب للفوز؟', answers: ['تركيز وتعاون', 'صراخ فقط', 'حظ فقط', 'نوم'], correct: 0 }
+        ]
+      },
+
+      {
+        name: 'يوتيوب وتيك توك',
+        icon: '▶️',
+        cls: 'c4',
+        questions: [
+          { question: 'أي منصة مشهورة بالفيديوهات القصيرة؟', answers: ['TikTok', 'Word', 'Excel', 'Maps'], correct: 0 },
+          { question: 'ماذا يعني لايك؟', answers: ['إعجاب', 'حذف', 'تصوير', 'شحن'], correct: 0 },
+          { question: 'ما المهم في الفيديو الناجح؟', answers: ['فكرة ممتعة وواضحة', 'صوت مزعج', 'صورة مظلمة', 'عنوان طويل'], correct: 0 },
+          { question: 'ماذا يفعل زر الاشتراك؟', answers: ['متابعة القناة', 'إغلاق الهاتف', 'حذف الفيديو', 'تشغيل الكاميرا'], correct: 0 },
+          { question: 'ما التصرف الآمن على الإنترنت؟', answers: ['عدم مشاركة المعلومات الشخصية', 'نشر كلمة المرور', 'فتح كل رابط', 'إرسال رقم الهاتف'], correct: 0 }
+        ]
+      },
+
+      {
+        name: 'كرة القدم',
+        icon: '⚽',
+        cls: 'c5',
+        questions: [
+          { question: 'كم لاعبًا في فريق كرة القدم داخل الملعب؟', answers: ['11', '7', '5', '20'], correct: 0 },
+          { question: 'من المعروف باسم CR7؟', answers: ['رونالدو', 'ميسي', 'صلاح', 'نيمار'], correct: 0 },
+          { question: 'كم شوطًا في المباراة؟', answers: ['شوطان', 'شوط واحد', 'ثلاثة', 'خمسة'], correct: 0 },
+          { question: 'ماذا يفعل حارس المرمى؟', answers: ['يحمي المرمى', 'يحكم المباراة', 'يبيع التذاكر', 'يدرب الفريق'], correct: 0 },
+          { question: 'أي بطاقة تعني الطرد؟', answers: ['الحمراء', 'الخضراء', 'الزرقاء', 'البيضاء'], correct: 0 }
+        ]
+      },
+
+      {
+        name: 'علوم',
+        icon: '🔬',
+        cls: 'c6',
+        questions: [
+          { question: 'ما الكوكب الأحمر؟', answers: ['المريخ', 'الأرض', 'المشتري', 'زحل'], correct: 0 },
+          { question: 'ماذا نحتاج للتنفس؟', answers: ['الأكسجين', 'الذهب', 'الرمل', 'البلاستيك'], correct: 0 },
+          { question: 'ما مصدر الضوء والحرارة للأرض؟', answers: ['الشمس', 'القمر', 'البحر', 'الجبال'], correct: 0 },
+          { question: 'ما العضو الذي يضخ الدم؟', answers: ['القلب', 'العين', 'الأذن', 'اليد'], correct: 0 },
+          { question: 'الماء يتكون من؟', answers: ['هيدروجين وأكسجين', 'ذهب وحديد', 'سكر وملح', 'رمل وهواء'], correct: 0 }
+        ]
+      },
+
+      {
+        name: 'رياضيات',
+        icon: '➗',
+        cls: 'c7',
+        questions: [
+          { question: 'كم يساوي 9 × 8؟', answers: ['72', '81', '64', '69'], correct: 0 },
+          { question: 'كم نصف 100؟', answers: ['50', '25', '10', '90'], correct: 0 },
+          { question: 'كم يساوي 7 + 13؟', answers: ['20', '19', '21', '17'], correct: 0 },
+          { question: 'ما العدد الزوجي؟', answers: ['24', '15', '33', '41'], correct: 0 },
+          { question: 'إذا كان لديك 3 تفاحات وأخذت 2، كم تفاحة معك؟', answers: ['2', '1', '3', '5'], correct: 0 }
+        ]
+      },
+
+      {
+        name: 'مشاهير وكرتون',
+        icon: '🎬',
+        cls: 'c8',
+        questions: [
+          { question: 'من الشخصية التي تطلق خيوطًا؟', answers: ['سبايدرمان', 'باتمان', 'سوبرمان', 'سونك'], correct: 0 },
+          { question: 'من الشخصية الزرقاء السريعة؟', answers: ['سونك', 'سبونج بوب', 'هالك', 'علاء الدين'], correct: 0 },
+          { question: 'أين يعيش سبونج بوب؟', answers: ['تحت البحر', 'في الفضاء', 'في الصحراء', 'في الجبل'], correct: 0 },
+          { question: 'من يقول إلى اللانهاية وما بعدها؟', answers: ['باز يطير', 'بطوط', 'شريك', 'توم'], correct: 0 },
+          { question: 'من الشخصية الخضراء القوية؟', answers: ['هالك', 'سبايدرمان', 'باتمان', 'سونك'], correct: 0 }
+        ]
+      },
+
+      {
+        name: 'مشاهير',
+        icon: '⭐',
+        cls: 'c9',
+        questions: [
+          { question: 'من اللاعب المعروف باسم CR7؟', answers: ['رونالدو', 'ميسي', 'صلاح', 'نيمار'], correct: 0 },
+          { question: 'من يُلقب بالبرغوث؟', answers: ['ميسي', 'رونالدو', 'مبابي', 'هالاند'], correct: 0 },
+          { question: 'محمد صلاح مشهور في أي رياضة؟', answers: ['كرة القدم', 'السباحة', 'التنس', 'كرة السلة'], correct: 0 },
+          { question: 'مبابي لاعب من أي دولة؟', answers: ['فرنسا', 'اليابان', 'البرازيل', 'مصر'], correct: 0 },
+          { question: 'ليونيل ميسي اشتهر في؟', answers: ['كرة القدم', 'الملاكمة', 'الجري', 'الجمباز'], correct: 0 }
+        ]
+      },
+
+      {
+        name: 'مأكولات',
+        icon: '🍔',
+        cls: 'c10',
+        questions: [
+          { question: 'أي أكلة مشهورة من إيطاليا؟', answers: ['بيتزا', 'سوشي', 'منسف', 'حمص'], correct: 0 },
+          { question: 'السوشي مشهور في؟', answers: ['اليابان', 'إيطاليا', 'فرنسا', 'مصر'], correct: 0 },
+          { question: 'ما المكون الأساسي للخبز؟', answers: ['الطحين', 'الحديد', 'البلاستيك', 'الرمل'], correct: 0 },
+          { question: 'أي مشروب صحي للجسم؟', answers: ['الماء', 'الوقود', 'الدهان', 'الصابون'], correct: 0 },
+          { question: 'الحمص معروف كثيرًا في؟', answers: ['بلاد الشام', 'القطب الجنوبي', 'الفضاء', 'القمر'], correct: 0 }
+        ]
+      },
+
+      {
+        name: 'تاريخ',
+        icon: '🏺',
+        cls: 'c11',
+        questions: [
+          { question: 'في أي قارة تقع مصر؟', answers: ['أفريقيا', 'أوروبا', 'أمريكا', 'أستراليا'], correct: 0 },
+          { question: 'الأهرامات موجودة في؟', answers: ['مصر', 'الصين', 'إيطاليا', 'كندا'], correct: 0 },
+          { question: 'التاريخ يدرس ماذا؟', answers: ['أحداث الماضي', 'الطقس فقط', 'الألعاب فقط', 'الطبخ فقط'], correct: 0 },
+          { question: 'من بنى حضارة الأهرامات؟', answers: ['المصريون القدماء', 'الرومان', 'الفايكنج', 'الهنود'], correct: 0 },
+          { question: 'القدس مدينة ذات أهمية؟', answers: ['تاريخية ودينية', 'رياضية فقط', 'صناعية فقط', 'خيالية'], correct: 0 }
+        ]
+      },
+
+      {
+        name: 'الشرق الأوسط',
+        icon: '🌍',
+        cls: 'c1',
+        questions: [
+          { question: 'ما عاصمة الأردن؟', answers: ['عمّان', 'بيروت', 'دمشق', 'القاهرة'], correct: 0 },
+          { question: 'ما عاصمة لبنان؟', answers: ['بيروت', 'عمّان', 'بغداد', 'الدوحة'], correct: 0 },
+          { question: 'ما عاصمة مصر؟', answers: ['القاهرة', 'الرياض', 'تونس', 'مسقط'], correct: 0 },
+          { question: 'دبي مدينة مشهورة في؟', answers: ['الإمارات', 'المغرب', 'سوريا', 'العراق'], correct: 0 },
+          { question: 'أي بحر يقع غرب البلاد؟', answers: ['البحر المتوسط', 'البحر الأحمر', 'بحر الصين', 'المحيط الهندي'], correct: 0 }
+        ]
+      },
+
+      {
+        name: 'السرعة والذكاء',
+        icon: '🧠',
+        cls: 'c2',
+        questions: [
+          { question: 'ما الشيء الذي نكسره قبل أن نأكله؟', answers: ['البيضة', 'الماء', 'الهواء', 'الضوء'], correct: 0 },
+          { question: 'شيء له أسنان ولا يعض؟', answers: ['المشط', 'الكلب', 'السمكة', 'القلم'], correct: 0 },
+          { question: 'ما الشيء الذي يمشي بلا أرجل؟', answers: ['الساعة', 'السيارة', 'الباب', 'الحقيبة'], correct: 0 },
+          { question: 'كلما أخذت منه كبر، ما هو؟', answers: ['الحفرة', 'الشجرة', 'الكتاب', 'الكرة'], correct: 0 },
+          { question: 'ما الشيء الذي نراه ولا نستطيع لمسه؟', answers: ['الظل', 'الكرسي', 'الهاتف', 'القلم'], correct: 0 }
+        ]
+      },
+
+      {
+        name: 'موسيقى وأصوات',
+        icon: '🎵',
+        cls: 'c3',
+        questions: [
+          { question: 'ما العضو الذي نسمع به؟', answers: ['الأذن', 'العين', 'اليد', 'القدم'], correct: 0 },
+          { question: 'أي آلة لها مفاتيح بيضاء وسوداء؟', answers: ['البيانو', 'الطبل', 'العود', 'الناي'], correct: 0 },
+          { question: 'ماذا نستخدم لتسجيل الصوت؟', answers: ['الميكروفون', 'المصباح', 'الملعقة', 'الحذاء'], correct: 0 },
+          { question: 'الصوت العالي قد يضر؟', answers: ['الأذن', 'العين', 'الشعر', 'اليد'], correct: 0 },
+          { question: 'ما اسم صوت المكالمة؟', answers: ['نغمة الرنين', 'الصورة', 'البطارية', 'الخريطة'], correct: 0 }
+        ]
+      },
+
+      {
+        name: 'صور مضحكة وميمز',
+        icon: '😂',
+        cls: 'c4',
+        questions: [
+          { question: 'ما اسم الصور المضحكة المنتشرة على الإنترنت؟', answers: ['ميمز', 'PDF', 'خرائط', 'كلمات مرور'], correct: 0 },
+          { question: 'لماذا تنتشر الميمز بسرعة؟', answers: ['لأنها مضحكة', 'لأنها طويلة', 'لأنها سرية', 'لأنها بلا صورة'], correct: 0 },
+          { question: 'ماذا يعني الإيموجي 😂؟', answers: ['ضحك', 'غضب', 'نوم', 'خوف'], correct: 0 },
+          { question: 'ما الأفضل عند مشاركة صورة مضحكة؟', answers: ['ألا تسيء لأحد', 'السخرية من الآخرين', 'نشر الأسرار', 'الكذب'], correct: 0 },
+          { question: 'صورة AI مضحكة قد تكون؟', answers: ['قطة تدرس في الصف', 'ورقة فارغة', 'رقم هاتف', 'زر إغلاق'], correct: 0 }
+        ]
+      },
+
+      {
+        name: 'المهمة السرية',
+        icon: '✨',
+        cls: 'c5',
+        questions: [
+          { question: 'صفقوا 3 مرات وارفعوا أيديكم!', answers: ['تم!', 'لا', 'مرة أخرى', 'تخطي'], correct: 0 },
+          { question: 'اختاروا قائدًا يصرخ باسم الفريق!', answers: ['تم!', 'لا', 'لاحقًا', 'تخطي'], correct: 0 },
+          { question: 'قولوا نحن أبطال التكنولوجيا!', answers: ['تم!', 'لا', 'مرة أخرى', 'تخطي'], correct: 0 },
+          { question: 'قلدوا صوت روبوت لمدة 5 ثوانٍ!', answers: ['تم!', 'لا', 'صعب', 'تخطي'], correct: 0 },
+          { question: 'اصنعوا حركة احتفال جماعية!', answers: ['تم!', 'لا', 'مرة أخرى', 'تخطي'], correct: 0 }
+        ]
+      }
+    ];
+
+    let blue = 0;
+    let pink = 0;
+    let currentTeam = 'blue';
+    let stealMode = false;
+    let currentIndex = null;
+    let currentQuestion = null;
+    let timer = null;
+    let timeLeft = 30;
+    const used = new Set();
+
+    function renderBoard() {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+      categories.forEach((cat, i) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'hex-wrap';
+
+        const btn = document.createElement('button');
+
+        let extraClass = '';
+        if (categoryWinners[i] === 'blue') extraClass = 'blue-team';
+        if (categoryWinners[i] === 'pink') extraClass = 'pink-team';
+
+        btn.className = `hex ${cat.cls} ${extraClass} ${used.has(i) ? 'used' : ''}`;
+        btn.innerHTML = `<div class="icon">${cat.icon}</div><div>${cat.name}</div>`;
+        btn.onclick = () => openQuestion(i);
+
+        wrap.appendChild(btn);
+        board.appendChild(wrap);
+      });
+    }
+
+    function selectTeam(team) {
+      currentTeam = team;
+      document.getElementById('selectBlue').classList.toggle('active', team === 'blue');
+      document.getElementById('selectPink').classList.toggle('active', team === 'pink');
+    }
+
+    function openQuestion(index) {
+      stealMode = false;
+      if (used.has(index)) return;
+      currentIndex = index;
+      const cat = categories[index];
+
+      // اختيار سؤال عشوائي من الفئة
+      currentQuestion = cat.questions[Math.floor(Math.random() * cat.questions.length)];
+
+      document.getElementById('qCategory').textContent = cat.icon + ' ' + cat.name;
+      document.getElementById('qText').textContent = currentQuestion.question;
+      document.getElementById('feedback').textContent = '';
+      const answersBox = document.getElementById('answers');
+      answersBox.innerHTML = '';
+      currentQuestion.answers.forEach((ans, idx) => {
+        const button = document.createElement('button');
+        button.className = 'answer';
+        button.textContent = ans;
+        button.onclick = () => answerQuestion(button, idx);
+        answersBox.appendChild(button);
+      });
+      document.getElementById('questionModal').classList.add('show');
+      startTimer();
+    }
+
+    function startTimer() {
+      clearInterval(timer);
+      timeLeft = 30;
+      updateTimerText();
+      timer = setInterval(() => {
+        timeLeft--;
+        updateTimerText();
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          document.getElementById('feedback').textContent = '⏰ انتهى الوقت!';
+        }
+      }, 1000);
+    }
+
+    function updateTimerText() {
+      const text = '00:' + String(timeLeft).padStart(2, '0');
+      document.getElementById('qTimer').textContent = text;
+      document.getElementById('mainTimer').textContent = text;
+    }
+
+    function answerQuestion(button, idx) {
+      if (currentIndex === null || used.has(currentIndex)) return;
+
+      const cat = categories[currentIndex];
+      const buttons = [...document.querySelectorAll('.answer')];
+
+      // تعطيل الزر الذي تم الضغط عليه فقط
+      button.disabled = true;
+
+      // إذا كانت الإجابة صحيحة
+      if (idx === currentQuestion.correct) {
+        clearInterval(timer);
+
+        button.classList.add('correct');
+        document.getElementById('feedback').textContent = '✅ إجابة صحيحة! +400 نقطة';
+
+        // تشغيل صوت النجاح
+        const success = document.getElementById('successSound');
+        success.currentTime = 0;
+        success.play().catch(() => {});
+
+        if (currentTeam === 'blue') blue += 400;
+        else pink += 400;
+
+        // حفظ لون الفريق الفائز قبل تبديل الدور
+        const winningTeam = currentTeam;
+
+        // تلوين الفئة بلون الفريق الفائز
+        categoryWinners[currentIndex] = winningTeam;
+
+        // تبديل الدور تلقائيًا بعد الإجابة الصحيحة
+        if (currentTeam === 'blue') {
+          selectTeam('pink');
+        } else {
+          selectTeam('blue');
+        }
+
+        // فقط عند الإجابة الصحيحة يتم إغلاق السؤال
+        used.add(currentIndex);
+
+        // تعطيل جميع الأزرار
+        buttons.forEach(b => b.disabled = true);
+
+        updateScores();
+        renderBoard();
+      }
+      // إذا كانت الإجابة خاطئة
+      else {
+        button.classList.add('wrong');
+
+        // أول خطأ → إعطاء فرصة سرقة للفريق الثاني
+        if (!stealMode) {
+          stealMode = true;
+
+          document.getElementById('feedback').textContent = '❌ إجابة غير صحيحة! الآن فرصة سرقة للفريق الآخر 😈';
+
+          if (currentTeam === 'blue') {
+            selectTeam('pink');
+          } else {
+            selectTeam('blue');
+          }
+        }
+        // إذا أخطأ الفريق الثاني أيضًا
+        else {
+          clearInterval(timer);
+
+          buttons.forEach((b, i) => {
+            b.disabled = true;
+            if (i === currentQuestion.correct) {
+              b.classList.add('correct');
+            }
+          });
+
+          document.getElementById('feedback').textContent = '❌ الفريقان أخطآ! تم كشف الإجابة الصحيحة';
+
+          used.add(currentIndex);
+          renderBoard();
+        }
+      }
+    }
+
+    function updateScores() {
+      document.getElementById('blueScore').textContent = blue;
+      document.getElementById('pinkScore').textContent = pink;
+      document.getElementById('totalScore').textContent = blue + pink;
+    }
+
+    function closeQuestion() {
+      clearInterval(timer);
+      document.getElementById('questionModal').classList.remove('show');
+      document.getElementById('mainTimer').textContent = '00:30';
+    }
+
+    function showResults() {
+      clearInterval(timer);
+      document.getElementById('questionModal').classList.remove('show');
+
+      const resultBox = document.getElementById('resultBox');
+      const resultTitle = document.getElementById('resultTitle');
+      const celebrationIcon = document.getElementById('celebrationIcon');
+      const confettiText = document.getElementById('confettiText');
+
+      resultBox.classList.remove('result-box-win', 'result-box-tie');
+      resultTitle.classList.remove('tie-title');
+
+      let winnerName = '';
+
+      if (blue === pink) {
+        resultBox.classList.add('result-box-tie');
+        resultTitle.classList.add('tie-title');
+        resultTitle.textContent = 'تعادل ناري!';
+        celebrationIcon.textContent = '🤝⚡🎉';
+        confettiText.textContent = '💙 ✨ 💜 ✨ 💙';
+        winnerName = 'الفريقان أبطال اليوم!';
+      } else if (blue > pink) {
+        resultBox.classList.add('result-box-win');
+        resultTitle.textContent = 'الفائز الكبير!';
+        celebrationIcon.textContent = '🏆🎉✨';
+        confettiText.textContent = '🎊 ✨ 🎉 ⭐ 🎊';
+        winnerName = '🔵 الفريق الأزرق';
+      } else {
+        resultBox.classList.add('result-box-win');
+        resultTitle.textContent = 'الفائز الكبير!';
+        celebrationIcon.textContent = '🏆🎉✨';
+        confettiText.textContent = '🎊 ✨ 🎉 ⭐ 🎊';
+        winnerName = '🟣 الفريق الوردي';
+      }
+
+      document.getElementById('winnerText').textContent = winnerName;
+
+      document.getElementById('finalScores').innerHTML = `
+        🔵 الأزرق: ${blue} نقطة<br>
+        🟣 الوردي: ${pink} نقطة
+      `;
+
+      document.getElementById('resultModal').classList.add('show');
+
+      // تشغيل صوت الفوز أو التعادل
+      const sound = document.getElementById('winSound');
+      sound.currentTime = 0;
+      sound.play().catch(() => {});
+    }
+
+    function hideResults() {
+      document.getElementById('resultModal').classList.remove('show');
+    }
+
+    function resetGame() {
+      blue = 0;
+      pink = 0;
+      used.clear();
+      Object.keys(categoryWinners).forEach(k => delete categoryWinners[k]);
+      currentIndex = null;
+      updateScores();
+      renderBoard();
+      document.getElementById('resultModal').classList.remove('show');
+      document.getElementById('mainTimer').textContent = '00:30';
+    }
+
+    renderBoard();
+    updateScores();
+  </script>
+</body>
+</html>

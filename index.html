@@ -324,6 +324,27 @@
     button.action.pink { background: linear-gradient(135deg, var(--pink), #ffffff); }
     button.action.gold { background: linear-gradient(135deg, var(--yellow), #ffffff); }
 
+    .final-result-btn {
+      font-size: clamp(22px, 2.6vw, 36px) !important;
+      padding: 20px 34px !important;
+      border-radius: 24px !important;
+      background: linear-gradient(135deg, var(--yellow), #ffffff, var(--cyan)) !important;
+      box-shadow: 0 0 34px rgba(255,208,0,.55), 0 0 48px rgba(0,234,255,.28) !important;
+      animation: pulse 0.8s infinite alternate;
+    }
+
+    .end-actions {
+      display: none;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin: 24px auto 0;
+    }
+
+    .end-actions.show {
+      display: flex;
+    }
+
     .team-select {
       display: flex;
       justify-content: center;
@@ -522,11 +543,16 @@
         <div class="team-name">الفريق الأزرق</div>
         <div class="team-score" id="blueScore">0</div>
       </div>
-      <div class="cta">اختاروا فئة وابدؤوا التحدّي!</div>
+      <div class="cta" id="mainCta">اختاروا فئة وابدؤوا التحدّي!</div>
       <div class="team-card pink">
         <div class="team-name">الفريق الوردي</div>
         <div class="team-score" id="pinkScore">0</div>
       </div>
+    </section>
+
+    <section class="end-actions" id="endActions">
+      <button class="action gold final-result-btn" onclick="showResults()">🏆 عرض النتيجة النهائية</button>
+      <button class="action pink" onclick="resetGame()">🔁 العبوا من جديد</button>
     </section>
   </main>
 
@@ -848,6 +874,16 @@
         wrap.appendChild(btn);
         board.appendChild(wrap);
       });
+
+      checkGameFinished();
+    }
+
+    function checkGameFinished() {
+      const finished = used.size === categories.length;
+      document.getElementById('endActions').classList.toggle('show', finished);
+      document.getElementById('mainCta').textContent = finished
+        ? 'انتهت جميع الفئات! اضغطوا لعرض النتيجة النهائية 🏆'
+        : 'اختاروا فئة وابدؤوا التحدّي!';
     }
 
     function selectTeam(team) {
@@ -915,7 +951,9 @@
         clearInterval(timer);
 
         button.classList.add('correct');
-        document.getElementById('feedback').textContent = '✅ إجابة صحيحة! +400 نقطة';
+        document.getElementById('feedback').textContent = used.size + 1 === categories.length
+          ? '✅ إجابة صحيحة! انتهت جميع الفئات 🏆'
+          : '✅ إجابة صحيحة! +400 نقطة';
 
         // تشغيل صوت النجاح
         const success = document.getElementById('successSound');
@@ -974,7 +1012,9 @@
             }
           });
 
-          document.getElementById('feedback').textContent = '❌ الفريقان أخطآ! تم كشف الإجابة الصحيحة';
+          document.getElementById('feedback').textContent = used.size + 1 === categories.length
+            ? '❌ الفريقان أخطآ! انتهت جميع الفئات 🏆'
+            : '❌ الفريقان أخطآ! تم كشف الإجابة الصحيحة';
 
           used.add(currentIndex);
           renderBoard();
@@ -1058,7 +1098,9 @@
       updateScores();
       renderBoard();
       document.getElementById('resultModal').classList.remove('show');
+      document.getElementById('questionModal').classList.remove('show');
       document.getElementById('mainTimer').textContent = '00:30';
+      checkGameFinished();
     }
 
     renderBoard();
